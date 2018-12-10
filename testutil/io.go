@@ -11,32 +11,9 @@ import (
 
 var update = flag.Bool("update", false, "update .golden files")
 
-// ReadGolden reads the golden file for the given test
-func ReadGolden(t testing.TB) (string, func(string)) {
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	path := filepath.Join(cwd, "testdata", t.Name()+".golden")
-
-	return ReadTestData(t, path), func(s string) {
-		if !*update {
-			return
-		}
-
-		t.Log("updating golden file at", path)
-		err := ioutil.WriteFile(path, []byte(s), 0666)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-// CompareGolden reads the golden file for the given test
+// CompareGolden reads a golden file for a given test and compares
+// to the given bytes
 func CompareGolden(t testing.TB, d []byte) {
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -52,21 +29,25 @@ func CompareGolden(t testing.TB, d []byte) {
 		_ = file.Close()
 	}()
 
+	var golden []byte
+
 	if *update {
 		t.Log("updating golden file at", path)
 		_, err = file.Write(d)
+		golden = d
+		if err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		golden, err = ioutil.ReadAll(file)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	contents, err := ioutil.ReadAll(file)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if bytes.Equal(contents, d) {
-		t.Fatalf("expected:\n%s, got:\n%s", contents, d)
+	if !bytes.Equal(golden, d) {
+		c := bytes.Compare(golden, d)
+		t.Fatalf("difference at byte %d\nwant:\n%s\ngot:\n%s", c, golden, d)
 	}
 }
 

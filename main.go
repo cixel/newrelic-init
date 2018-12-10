@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/token"
 	"log"
 	"os"
 
@@ -81,19 +82,24 @@ func injectInit(pkg *packages.Package, name, key string) {
 }
 
 func buildInitFunc(name, key string) ast.Decl {
-	newConf := fmt.Sprintf(`conf := newrelic.NewConfig(%s, %s)`, name, key)
+	newConf := fmt.Sprintf(`newrelic.NewConfig("%s", "%s")`, name, key)
 
 	expr, err := parser.ParseExpr(newConf)
 	if err != nil {
-		panic(err) // oof
+		// 'this should never happen'
+		panic(err)
 	}
 
 	decl := &ast.FuncDecl{
 		Name: ast.NewIdent("init"),
 		Body: &ast.BlockStmt{
 			List: []ast.Stmt{
-				&ast.ExprStmt{
-					X: expr,
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{ast.NewIdent("conf")},
+					Tok: token.DEFINE,
+					Rhs: []ast.Expr{
+						expr,
+					},
 				},
 			},
 		},

@@ -1,1 +1,9 @@
-s
+package main
+
+import "github.com/newrelic/go-agent"
+
+func main() {
+}
+func init() {
+	conf := newrelic.NewConfig("test_app_name", "test_license")
+}
