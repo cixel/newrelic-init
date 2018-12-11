@@ -9,15 +9,15 @@ import (
 )
 
 // NodeToString formats an ast.Node and returns the resulting string
-func nodeToString(n ast.Node, fset *token.FileSet) string {
-	buf := nodeToBuf(n, fset)
+func nodeToString(n ast.Node) string {
+	buf := nodeToBuf(n)
 	return buf.String()
 }
 
 // formats an ast.Node and returns the resulting buffer
-func nodeToBuf(n ast.Node, fset *token.FileSet) bytes.Buffer {
+func nodeToBuf(n ast.Node) bytes.Buffer {
 	var buf bytes.Buffer
-	err := format.Node(&buf, fset, n)
+	err := format.Node(&buf, token.NewFileSet(), n)
 	if err != nil {
 		log.Fatal(err)
 	}

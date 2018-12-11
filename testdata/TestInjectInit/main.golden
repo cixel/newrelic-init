@@ -1,9 +1,13 @@
 package main
 
-import "github.com/newrelic/go-agent"
+import newrelic "github.com/newrelic/go-agent"
 
 func main() {
 }
+
+var newrelicApp newrelic.Application
+
 func init() {
 	conf := newrelic.NewConfig("test_app_name", "test_license")
+	app, err := newrelic.NewApplication(conf)
 }

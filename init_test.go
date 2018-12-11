@@ -8,11 +8,12 @@ import (
 )
 
 func TestInjectInit(t *testing.T) {
-	tests := []string{
-		"main",
+	tests := map[string]bool{
+		"main":    true,
+		"nonmain": false,
 	}
 
-	for _, test := range tests {
+	for test, expect := range tests {
 		t.Run(test, func(t *testing.T) {
 			pkg := testutil.LoadPkg(t)
 
@@ -20,25 +21,25 @@ func TestInjectInit(t *testing.T) {
 			const license = "test_license"
 
 			injectInit(pkg, appname, license)
-			buf := nodeToBuf(pkg.Syntax[0], pkg.Fset)
+			buf := nodeToBuf(pkg.Syntax[0])
 
 			testutil.CompareGolden(t, buf.Bytes())
 
 			str := buf.String()
 
-			if !strings.Contains(str, "conf :=") {
+			if expect == !strings.Contains(str, "conf :=") {
 				t.Fatalf("missing assignment to conf:\n%s", str)
 			}
 
-			if !strings.Contains(str, appname) {
+			if expect == !strings.Contains(str, appname) {
 				t.Fatalf("missing app name:\n%s", str)
 			}
 
-			if !strings.Contains(str, appname) {
+			if expect == !strings.Contains(str, appname) {
 				t.Fatalf("missing license:\n%s", str)
 			}
 
-			if !strings.Contains(str, "github.com/newrelic/go-agent") {
+			if expect == !strings.Contains(str, "github.com/newrelic/go-agent") {
 				t.Fatalf("missing newrelic import:\n%s", str)
 			}
 		})

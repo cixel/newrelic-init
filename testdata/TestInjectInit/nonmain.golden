@@ -1,0 +1,4 @@
+package notmain
+
+func a() {
+}
