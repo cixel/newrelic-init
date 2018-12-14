@@ -54,17 +54,20 @@ func TestAddImport(t *testing.T) {
 		"imported and named":     fmt.Sprintf("package main\nimport blah \"%s\"", newrelicPkgPath),
 		"imported and not named": fmt.Sprintf("package main\nimport \"%s\"", newrelicPkgPath),
 		"not imported with docs": "//doc1\n\n//doc2\npackage main",
+		"named in group":         fmt.Sprintf("package main\nimport (\n\tblah \"%s\"\n)", newrelicPkgPath),
+		"not named in group":     fmt.Sprintf("package main\nimport (\n\t\"%s\"\n)", newrelicPkgPath),
 	}
 
 	for test, code := range tests {
 		t.Run(test, func(*testing.T) {
+			fmt.Println(code)
 			file, err := decorator.Parse(code)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			addImport(file, "newrelic", newrelicPkgPath)
-			i := fmt.Sprintf(`import newrelic "%s"`, newrelicPkgPath)
+			i := fmt.Sprintf(`newrelic "%s"`, newrelicPkgPath)
 
 			str := filetoString(file)
 			c := strings.Count(str, i)
