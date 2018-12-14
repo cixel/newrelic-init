@@ -9,5 +9,6 @@ var newrelicApp newrelic.Application
 
 func init() {
 	conf := newrelic.NewConfig("test_app_name", "test_license")
-	app, err := newrelic.NewApplication(conf)
+	app, _ := newrelic.NewApplication(conf)
+	newrelicApp = app
 }

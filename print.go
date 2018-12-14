@@ -2,22 +2,22 @@ package main
 
 import (
 	"bytes"
-	"go/ast"
-	"go/format"
-	"go/token"
 	"log"
+
+	"github.com/dave/dst"
+	"github.com/dave/dst/decorator"
 )
 
 // NodeToString formats an ast.Node and returns the resulting string
-func nodeToString(n ast.Node) string {
-	buf := nodeToBuf(n)
+func filetoString(f *dst.File) string {
+	buf := fileToBuf(f)
 	return buf.String()
 }
 
 // formats an ast.Node and returns the resulting buffer
-func nodeToBuf(n ast.Node) bytes.Buffer {
+func fileToBuf(f *dst.File) bytes.Buffer {
 	var buf bytes.Buffer
-	err := format.Node(&buf, token.NewFileSet(), n)
+	err := decorator.Fprint(&buf, f)
 	if err != nil {
 		log.Fatal(err)
 	}

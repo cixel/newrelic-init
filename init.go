@@ -1,57 +1,82 @@
 package main
 
 import (
-	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 
-	"golang.org/x/tools/go/ast/astutil"
-	"golang.org/x/tools/go/packages"
+	// "go/dst"
+
+	"fmt"
+	"go/token"
+	"strings"
+
+	"github.com/dave/dst"
+	"github.com/dave/dst/decorator"
 )
+
+const newrelicPkgPath = "github.com/newrelic/go-agent"
 
 // TODO: refactor so that this passes in the decl directly rather than
 // calling buildInitFunc. could make testing easier.
-func injectInit(pkg *packages.Package, name, key string) {
+func injectInit(pkg *decorator.Package, name, key string) {
 	if pkg.Name != "main" {
 		return
 	}
 
 	f := pkg.Syntax[0]
-	// not sure if I should go through apply/replace here, or just modify the file directly
-	astutil.Apply(f, func(c *astutil.Cursor) bool {
-		file, ok := c.Node().(*ast.File)
-		if !ok {
-			return true
+
+	d := buildInitFunc(name, key)
+
+	// We cannot c.Replace File nodes (see Cursor doc for reasoning)
+	// so we modify the File directly.
+	// First add our package-wide 'app' variable (for use by wrappers) to assign to.
+	// Then add the init function.
+	f.Decls = append(f.Decls, appVar())
+	f.Decls = append(f.Decls, d)
+
+	addImport(f, "newrelic", newrelicPkgPath)
+}
+
+func stripQuotes(s string) string {
+	return strings.Replace(s, "\"", "", -1)
+}
+
+func addImport(f *dst.File, name, path string) {
+	var added bool
+	for _, imp := range f.Imports {
+		if stripQuotes(imp.Path.Value) == path {
+			if imp.Name == nil || imp.Name.Name != name {
+				imp.Name = dst.NewIdent(name)
+				added = true
+			}
 		}
+	}
 
-		d := buildInitFunc(name, key)
-
-		// add our package-wide 'app' variable to assign to
-		// for use by wrappers
-		file.Decls = append(file.Decls, appVar())
-
-		// cannot c.Replace File nodes (see Cursor doc for reasoning) so we modify the File directly
-		file.Decls = append(file.Decls, d)
-
-		// FIXME
-		astutil.AddNamedImport(pkg.Fset, f, "newrelic", "github.com/newrelic/go-agent")
-
-		return false
-
-	}, nil)
+	if !added {
+		imp := &dst.GenDecl{
+			Tok: token.IMPORT,
+			Specs: []dst.Spec{
+				&dst.ImportSpec{
+					Name: dst.NewIdent(name),
+					Path: &dst.BasicLit{
+						Kind:  token.STRING,
+						Value: fmt.Sprintf(`"%s"`, path),
+					},
+				},
+			},
+		}
+		f.Decls = append([]dst.Decl{imp}, f.Decls...)
+	}
 }
 
 // creates the node: `var newrelicApp newrelic.Application`
-func appVar() *ast.GenDecl {
-	d := &ast.GenDecl{
+func appVar() *dst.GenDecl {
+	d := &dst.GenDecl{
 		Tok: token.VAR,
-		Specs: []ast.Spec{
-			&ast.ValueSpec{
-				Names: []*ast.Ident{ast.NewIdent("newrelicApp")},
-				Type: &ast.SelectorExpr{
-					X:   ast.NewIdent("newrelic"),
-					Sel: ast.NewIdent("Application"),
+		Specs: []dst.Spec{
+			&dst.ValueSpec{
+				Names: []*dst.Ident{dst.NewIdent("newrelicApp")},
+				Type: &dst.SelectorExpr{
+					X:   dst.NewIdent("newrelic"),
+					Sel: dst.NewIdent("Application"),
 				},
 			},
 		},
@@ -60,60 +85,78 @@ func appVar() *ast.GenDecl {
 	return d
 }
 
-// config := newrelic.NewConfig("YOUR_APP_NAME", "_YOUR_NEW_RELIC_LICENSE_KEY_")
-// app, err := newrelic.NewApplication(config)
-// if err != nil {
-// }
-func buildInitFunc(name, key string) ast.Decl {
-	// line 1
-	newConf := fmt.Sprintf(`newrelic.NewConfig("%s", "%s")`, name, key)
-
-	callNewConf, err := parser.ParseExpr(newConf)
-	if err != nil {
-		// 'this should never happen'
-		panic(err)
+func buildInitFunc(name, key string) dst.Decl {
+	// --- line 1 ---
+	// config := newrelic.NewConfig("YOUR_APP_NAME", "_YOUR_NEW_RELIC_LICENSE_KEY_")
+	callNewConf := &dst.CallExpr{
+		Fun: &dst.SelectorExpr{
+			X:   dst.NewIdent("newrelic"),
+			Sel: dst.NewIdent("NewConfig"),
+		},
+		Args: []dst.Expr{
+			&dst.BasicLit{
+				Kind:  token.STRING,
+				Value: `"` + name + `"`,
+			},
+			&dst.BasicLit{
+				Kind:  token.STRING,
+				Value: `"` + key + `"`,
+			},
+		},
 	}
 
-	assignConf := &ast.AssignStmt{
-		Lhs: []ast.Expr{ast.NewIdent("conf")},
+	assignConf := &dst.AssignStmt{
+		Lhs: []dst.Expr{dst.NewIdent("conf")},
 		Tok: token.DEFINE,
-		Rhs: []ast.Expr{
+		Rhs: []dst.Expr{
 			callNewConf,
 		},
 	}
 
-	// line 2
-	newApp := fmt.Sprintf(`newrelic.NewApplication(conf)`)
-	callNewApp, err := parser.ParseExpr(newApp)
-	if err != nil {
-		// FIXME
-		panic(err)
+	// ---line 2---
+	// TODO: we shouldn't be underscoring the error
+	// app, err := newrelic.NewApplication(config)
+	callNewApp := &dst.CallExpr{
+		Fun: &dst.SelectorExpr{
+			X:   dst.NewIdent("newrelic"),
+			Sel: dst.NewIdent("NewApplication"),
+		},
+		Args: []dst.Expr{dst.NewIdent("conf")},
 	}
 
-	assignApp := &ast.AssignStmt{
-		Lhs: []ast.Expr{ast.NewIdent("app"), ast.NewIdent("err")},
+	assignLocal := &dst.AssignStmt{
+		Lhs: []dst.Expr{dst.NewIdent("app"), dst.NewIdent("_")},
 		Tok: token.DEFINE,
-		Rhs: []ast.Expr{
+		Rhs: []dst.Expr{
 			callNewApp,
 		},
 	}
 
-	decl := &ast.FuncDecl{
-		Name: ast.NewIdent("init"),
-		Body: &ast.BlockStmt{
-			List: []ast.Stmt{
+	// ---line 3---
+	// newrelicApp = app
+	assignPkg := &dst.AssignStmt{
+		Lhs: []dst.Expr{dst.NewIdent("newrelicApp")},
+		Tok: token.ASSIGN,
+		Rhs: []dst.Expr{dst.NewIdent("app")},
+	}
+
+	decl := &dst.FuncDecl{
+		Name: dst.NewIdent("init"),
+		Body: &dst.BlockStmt{
+			List: []dst.Stmt{
 				assignConf,
-				assignApp,
+				assignLocal,
+				assignPkg,
 			},
 		},
 
-		// init functions have no types
-		Type: &ast.FuncType{
-			Params: &ast.FieldList{
-				List: []*ast.Field{},
+		// (empty type)
+		Type: &dst.FuncType{
+			Params: &dst.FieldList{
+				List: []*dst.Field{},
 			},
-			Results: &ast.FieldList{
-				List: []*ast.Field{},
+			Results: &dst.FieldList{
+				List: []*dst.Field{},
 			},
 		},
 	}

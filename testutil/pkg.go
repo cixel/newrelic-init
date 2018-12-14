@@ -4,19 +4,20 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/dave/dst/decorator"
 	"golang.org/x/tools/go/packages"
 )
 
 // LoadPkg loads a package using the tests's name, returning the syntax and
 // type info for use in testing. All rewrite tests use data stored in
 // testdata/<TestName>/**.go
-func LoadPkg(t testing.TB) *packages.Package {
+func LoadPkg(t testing.TB) *decorator.Package {
 	cfg := &packages.Config{
 		Mode: packages.LoadAllSyntax,
 		Dir:  filepath.Join("testdata", t.Name()),
 	}
 
-	pkgs, err := packages.Load(cfg, ".")
+	pkgs, err := decorator.Load(cfg, ".")
 	if err != nil {
 		t.Fatal(err)
 	}

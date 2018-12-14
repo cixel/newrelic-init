@@ -9,7 +9,17 @@ import (
 func usage() {
 	_, _ = fmt.Fprintln(os.Stderr, `Usage: instrument [OPTION]... SOURCE
 
-TODO: description
+newrelic-init adds New Relic to a package:
+
+var newrelicApp newrelic.Application
+func init() {
+	config := newrelic.NewConfig("YOUR_APP_NAME", "_YOUR_NEW_RELIC_LICENSE_KEY_")
+	app, _ := newrelic.NewApplication(config)
+	newrelicApp = app
+}
+
+It also attempts to wrap arguments to http.HandleFunc and http.Handle.
+See https://docs.newrelic.com/docs/agents/go-agent/installation/install-new-relic-go for more details.
 
 SOURCE must be valid as a package path.
 

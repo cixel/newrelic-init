@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"golang.org/x/tools/go/ast/astutil"
+	"github.com/dave/dst/decorator"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -37,20 +37,18 @@ func main() {
 		Dir:  src,
 	}
 
-	pkgs, err := packages.Load(cfg, ".")
+	pkgs, err := decorator.Load(cfg, ".")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	packages.Visit(pkgs, func(*packages.Package) bool {
-		// we only want to visit the given package,
-		// but we want to type check on everything
-		return false
-	}, func(pkg *packages.Package) {
-		for _, f := range pkg.Syntax {
-			astutil.Apply(f, nil, func(c *astutil.Cursor) bool {
-				return true
-			})
+	pkg := pkgs[0]
+	injectInit(pkg, name, key)
+
+	if write {
+		err := pkg.Save()
+		if err != nil {
+			log.Fatal(err)
 		}
-	})
+	}
 }
