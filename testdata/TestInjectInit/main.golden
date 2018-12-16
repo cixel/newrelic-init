@@ -1,6 +1,6 @@
 package main
 
-import newrelic "github.com/newrelic/go-agent"
+import "github.com/newrelic/go-agent"
 
 func main() {
 }

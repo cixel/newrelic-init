@@ -4,15 +4,15 @@ import (
 
 	// "go/dst"
 
-	"fmt"
 	"go/token"
-	"strings"
 
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 )
 
 const newrelicPkgPath = "github.com/newrelic/go-agent"
+
+var packageNameHints = map[string]string{newrelicPkgPath: "newrelic"}
 
 // TODO: refactor so that this passes in the decl directly rather than
 // calling buildInitFunc. could make testing easier.
@@ -31,40 +31,6 @@ func injectInit(pkg *decorator.Package, name, key string) {
 	// Then add the init function.
 	f.Decls = append(f.Decls, appVar())
 	f.Decls = append(f.Decls, d)
-
-	addImport(f, "newrelic", newrelicPkgPath)
-}
-
-func stripQuotes(s string) string {
-	return strings.Replace(s, "\"", "", -1)
-}
-
-func addImport(f *dst.File, name, path string) {
-	var added bool
-	for _, imp := range f.Imports {
-		if stripQuotes(imp.Path.Value) == path {
-			if imp.Name == nil || imp.Name.Name != name {
-				imp.Name = dst.NewIdent(name)
-				added = true
-			}
-		}
-	}
-
-	if !added {
-		imp := &dst.GenDecl{
-			Tok: token.IMPORT,
-			Specs: []dst.Spec{
-				&dst.ImportSpec{
-					Name: dst.NewIdent(name),
-					Path: &dst.BasicLit{
-						Kind:  token.STRING,
-						Value: fmt.Sprintf(`"%s"`, path),
-					},
-				},
-			},
-		}
-		f.Decls = append([]dst.Decl{imp}, f.Decls...)
-	}
 }
 
 // creates the node: `var newrelicApp newrelic.Application`
@@ -74,10 +40,7 @@ func appVar() *dst.GenDecl {
 		Specs: []dst.Spec{
 			&dst.ValueSpec{
 				Names: []*dst.Ident{dst.NewIdent("newrelicApp")},
-				Type: &dst.SelectorExpr{
-					X:   dst.NewIdent("newrelic"),
-					Sel: dst.NewIdent("Application"),
-				},
+				Type:  &dst.Ident{Path: newrelicPkgPath, Name: "Application"},
 			},
 		},
 	}
@@ -89,10 +52,7 @@ func buildInitFunc(name, key string) dst.Decl {
 	// --- line 1 ---
 	// config := newrelic.NewConfig("YOUR_APP_NAME", "_YOUR_NEW_RELIC_LICENSE_KEY_")
 	callNewConf := &dst.CallExpr{
-		Fun: &dst.SelectorExpr{
-			X:   dst.NewIdent("newrelic"),
-			Sel: dst.NewIdent("NewConfig"),
-		},
+		Fun: &dst.Ident{Path: newrelicPkgPath, Name: "NewConfig"},
 		Args: []dst.Expr{
 			&dst.BasicLit{
 				Kind:  token.STRING,
@@ -117,10 +77,7 @@ func buildInitFunc(name, key string) dst.Decl {
 	// TODO: we shouldn't be underscoring the error
 	// app, err := newrelic.NewApplication(config)
 	callNewApp := &dst.CallExpr{
-		Fun: &dst.SelectorExpr{
-			X:   dst.NewIdent("newrelic"),
-			Sel: dst.NewIdent("NewApplication"),
-		},
+		Fun:  &dst.Ident{Path: newrelicPkgPath, Name: "NewApplication"},
 		Args: []dst.Expr{dst.NewIdent("conf")},
 	}
 
