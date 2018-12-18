@@ -1,5 +1,7 @@
 github.com/dave/dst v0.22.4 h1:QIYDad/vjyQWKxC03PGb1d2WW8K5Ib4mazE9KVzUYvA=
 github.com/dave/dst v0.22.4/go.mod h1:LjPcLEauK4jC5hQ1fE/wr05O41zK91Pr4Qs22Ljq7gs=
+github.com/dave/dst v0.23.0 h1:iEcskkJw5Tf7FAvUqoNRwMlRcTSEFjRFuDg4NcEcFu4=
+github.com/dave/dst v0.23.0/go.mod h1:LjPcLEauK4jC5hQ1fE/wr05O41zK91Pr4Qs22Ljq7gs=
 github.com/dave/gopackages v0.0.0-20170318123100-46e7023ec56e/go.mod h1:i00+b/gKdIDIxuLDFob7ustLAVqhsZRk2qVZrArELGQ=
 github.com/dave/jennifer v1.2.0/go.mod h1:fIb+770HOpJ2fmN9EPPKOqm1vMGhB+TwXKMZhrIygKg=
 github.com/dave/kerr v0.0.0-20170318121727-bc25dd6abe8e/go.mod h1:qZqlPyPvfsDJt+3wHJ1EvSXDuVjFTK0j2p/ca+gtsb8=

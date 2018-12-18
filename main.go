@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/dave/dst/decorator"
+	"github.com/dave/dst/decorator/resolver/gopackages"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -46,7 +47,7 @@ func main() {
 	injectInit(pkg, name, key)
 
 	if write {
-		err := pkg.Save()
+		err := pkg.SaveWithResolver(gopackages.WithHints(pkg.Dir, packageNameHints))
 		if err != nil {
 			log.Fatal(err)
 		}
