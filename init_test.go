@@ -23,8 +23,6 @@ func TestInjectInit(t *testing.T) {
 			injectInit(pkg, appname, license)
 			buf := fileToBuf(pkg.Syntax[0], "foo", ".")
 
-			testutil.CompareGolden(t, buf.Bytes())
-
 			str := buf.String()
 
 			if expect == !strings.Contains(str, "conf :=") {
@@ -42,6 +40,8 @@ func TestInjectInit(t *testing.T) {
 			if expect == !strings.Contains(str, "github.com/newrelic/go-agent") {
 				t.Fatalf("missing newrelic import:\n%s", str)
 			}
+
+			testutil.CompareGolden(t, buf.Bytes())
 		})
 	}
 }

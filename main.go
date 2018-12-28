@@ -5,8 +5,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/decorator/resolver/gopackages"
+	"github.com/dave/dst/dstutil"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -44,10 +46,21 @@ func main() {
 	}
 
 	pkg := pkgs[0]
+
+	for _, file := range pkg.Syntax {
+		dstutil.Apply(file, nil, func(c *dstutil.Cursor) bool {
+			if call, ok := c.Node().(*dst.CallExpr); ok {
+				wrap(pkg, file, call, c)
+			}
+			return true
+		})
+	}
+
 	injectInit(pkg, name, key)
 
 	if write {
-		err := pkg.SaveWithResolver(gopackages.WithHints(pkg.Dir, packageNameHints))
+		r := gopackages.WithHints(pkg.Dir, packageNameHints)
+		err := pkg.SaveWithResolver(r)
 		if err != nil {
 			log.Fatal(err)
 		}
