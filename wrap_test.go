@@ -38,6 +38,8 @@ func TestWrap(t *testing.T) {
 			if !expect == strings.Contains(str, "newrelic.WrapHandleFunc") {
 				t.Fatalf("missing call to WrapHandleFunc:\n%s", str)
 			}
+
+			testutil.CompareGolden(t, buf.Bytes())
 		})
 	}
 }
@@ -95,7 +97,7 @@ func TestDoesFuncMatch(t *testing.T) {
 			sig:         httpHandleFuncType,
 			pkgPath:     "net/http",
 			shouldMatch: true,
-			// known limitation of matching with function
+			// known limitation of matching with pkgPath
 			shouldMatchPkg: false,
 		},
 	}

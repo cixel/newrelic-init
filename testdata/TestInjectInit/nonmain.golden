@@ -1,5 +1,15 @@
 package notmain
 
+import "github.com/newrelic/go-agent"
+
 func a() {
 
+}
+
+var newrelicApp newrelic.Application
+
+func init() {
+	conf := newrelic.NewConfig("test_app_name", "test_license")
+	app, _ := newrelic.NewApplication(conf)
+	newrelicApp = app
 }

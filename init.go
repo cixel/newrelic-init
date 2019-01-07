@@ -1,9 +1,6 @@
 package main
 
 import (
-
-	// "go/dst"
-
 	"go/token"
 
 	"github.com/dave/dst"
@@ -14,13 +11,7 @@ const newrelicPkgPath = "github.com/newrelic/go-agent"
 
 var packageNameHints = map[string]string{newrelicPkgPath: "newrelic"}
 
-// TODO: refactor so that this passes in the decl directly rather than
-// calling buildInitFunc. could make testing easier.
 func injectInit(pkg *decorator.Package, name, key string) {
-	if pkg.Name != "main" {
-		return
-	}
-
 	f := pkg.Syntax[0]
 
 	d := buildInitFunc(name, key)

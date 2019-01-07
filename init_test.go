@@ -10,7 +10,7 @@ import (
 func TestInjectInit(t *testing.T) {
 	tests := map[string]bool{
 		"main":    true,
-		"nonmain": false,
+		"nonmain": true,
 	}
 
 	for test, expect := range tests {
