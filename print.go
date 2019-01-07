@@ -30,11 +30,17 @@ func fileToBuf(f *dst.File, path, dir string) bytes.Buffer {
 }
 
 // formats an ast.Node and returns the resulting buffer
-func nodeToBuf(n ast.Node) bytes.Buffer {
+func astToBuf(n ast.Node) bytes.Buffer {
 	var buf bytes.Buffer
 	err := format.Node(&buf, token.NewFileSet(), n)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return buf
+}
+
+// formats an ast.Node and returns the resulting buffer
+func astToString(n ast.Node) string {
+	buf := astToBuf(n)
+	return buf.String()
 }

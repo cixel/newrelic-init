@@ -25,15 +25,15 @@ func TestInjectInit(t *testing.T) {
 
 			str := buf.String()
 
-			if expect == !strings.Contains(str, "conf :=") {
+			if !expect == strings.Contains(str, "conf :=") {
 				t.Fatalf("missing assignment to conf:\n%s", str)
 			}
 
-			if expect == !strings.Contains(str, appname) {
+			if !expect == strings.Contains(str, appname) {
 				t.Fatalf("missing app name:\n%s", str)
 			}
 
-			if expect == !strings.Contains(str, appname) {
+			if !expect == strings.Contains(str, appname) {
 				t.Fatalf("missing license:\n%s", str)
 			}
 

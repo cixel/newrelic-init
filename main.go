@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -12,32 +13,36 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func main() {
-	var (
-		name  string
-		key   string
-		write bool
-	)
+type config struct {
+	name  string
+	key   string
+	write bool
+}
 
-	flag.StringVar(&name, "name", "", "newrelic account name")
-	flag.StringVar(&key, "key", "", "newrelic license key")
-	flag.BoolVar(&write, "w", false, "write to source file instead of stdout")
+func parseFlags() config {
 	flag.Usage = usage
+
+	conf := config{}
+
+	flag.StringVar(&conf.name, "name", "", "newrelic account name")
+	flag.StringVar(&conf.key, "key", "", "newrelic license key")
+	flag.BoolVar(&conf.write, "w", false, "write to source file instead of stdout")
+
 	flag.Parse()
+
 	if len(flag.Args()) != 1 {
 		usage()
 		// http://tldp.org/LDP/abs/html/exitcodes.html
 		os.Exit(2)
 	}
 
-	log.SetPrefix("newrelic-init ")
-	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
+	return conf
+}
 
-	src := flag.Args()[0]
-
+func newrelic(conf config, dir string) *decorator.Package {
 	cfg := &packages.Config{
 		Mode: packages.LoadSyntax,
-		Dir:  src,
+		Dir:  dir,
 	}
 
 	pkgs, err := decorator.Load(cfg, ".")
@@ -50,19 +55,37 @@ func main() {
 	for _, file := range pkg.Syntax {
 		dstutil.Apply(file, nil, func(c *dstutil.Cursor) bool {
 			if call, ok := c.Node().(*dst.CallExpr); ok {
-				wrap(pkg, file, call, c)
+				wrap(pkg, call, c)
 			}
 			return true
 		})
 	}
 
-	injectInit(pkg, name, key)
+	injectInit(pkg, conf.name, conf.key)
 
-	if write {
+	return pkg
+}
+
+func main() {
+	conf := parseFlags()
+
+	log.SetPrefix("newrelic-init ")
+	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
+
+	dir := flag.Args()[0]
+
+	pkg := newrelic(conf, dir)
+
+	if conf.write {
 		r := gopackages.WithHints(pkg.Dir, packageNameHints)
 		err := pkg.SaveWithResolver(r)
 		if err != nil {
 			log.Fatal(err)
+		}
+	} else {
+		for _, file := range pkg.Syntax {
+			s := filetoString(file, pkg.PkgPath, dir)
+			fmt.Println(s)
 		}
 	}
 }
