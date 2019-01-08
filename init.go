@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"go/token"
 
 	"github.com/dave/dst"
@@ -9,12 +10,15 @@ import (
 
 const newrelicPkgPath = "github.com/newrelic/go-agent"
 
+const nrLicenseEnv = "NEW_RELIC_LICENSE_KEY"
+const nrAppEnv = "NEW_RELIC_APP_NAME"
+
 var packageNameHints = map[string]string{newrelicPkgPath: "newrelic"}
 
-func injectInit(pkg *decorator.Package, name, key string) {
+func injectInit(pkg *decorator.Package) {
 	f := pkg.Syntax[0]
 
-	d := buildInitFunc(name, key)
+	d := buildInitFunc()
 
 	// We cannot c.Replace File nodes (see Cursor doc for reasoning)
 	// so we modify the File directly.
@@ -39,20 +43,34 @@ func appVar() *dst.GenDecl {
 	return d
 }
 
-func buildInitFunc(name, key string) dst.Decl {
+// create a call to os.Getenv("env")
+func makeGetenv(env string) *dst.CallExpr {
+	e := &dst.BasicLit{
+		Kind:  token.STRING,
+		Value: fmt.Sprintf(`"%s"`, env),
+	}
+
+	call := &dst.CallExpr{
+		// Instead of a selector expr, let dst handle import resolution for us
+		// by using decorated Ident (https://github.com/dave/dst#imports)
+		Fun: &dst.Ident{
+			Name: "Getenv",
+			Path: "os",
+		},
+		Args: []dst.Expr{e},
+	}
+
+	return call
+}
+
+func buildInitFunc() dst.Decl {
 	// --- line 1 ---
-	// config := newrelic.NewConfig("YOUR_APP_NAME", "_YOUR_NEW_RELIC_LICENSE_KEY_")
+	// config := newrelic.NewConfig(os.Getenv(...), os.Getenv(...))
 	callNewConf := &dst.CallExpr{
 		Fun: &dst.Ident{Path: newrelicPkgPath, Name: "NewConfig"},
 		Args: []dst.Expr{
-			&dst.BasicLit{
-				Kind:  token.STRING,
-				Value: `"` + name + `"`,
-			},
-			&dst.BasicLit{
-				Kind:  token.STRING,
-				Value: `"` + key + `"`,
-			},
+			makeGetenv(nrAppEnv),
+			makeGetenv(nrLicenseEnv),
 		},
 	}
 
@@ -65,7 +83,6 @@ func buildInitFunc(name, key string) dst.Decl {
 	}
 
 	// ---line 2---
-	// TODO: we shouldn't be underscoring the error
 	// app, err := newrelic.NewApplication(config)
 	callNewApp := &dst.CallExpr{
 		Fun:  &dst.Ident{Path: newrelicPkgPath, Name: "NewApplication"},
@@ -73,6 +90,7 @@ func buildInitFunc(name, key string) dst.Decl {
 	}
 
 	assignLocal := &dst.AssignStmt{
+		// FIXME: we shouldn't be underscoring the error
 		Lhs: []dst.Expr{dst.NewIdent("app"), dst.NewIdent("_")},
 		Tok: token.DEFINE,
 		Rhs: []dst.Expr{

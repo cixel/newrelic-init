@@ -14,8 +14,6 @@ import (
 )
 
 type config struct {
-	name  string
-	key   string
 	write bool
 }
 
@@ -24,8 +22,6 @@ func parseFlags() config {
 
 	conf := config{}
 
-	flag.StringVar(&conf.name, "name", "", "newrelic account name")
-	flag.StringVar(&conf.key, "key", "", "newrelic license key")
 	flag.BoolVar(&conf.write, "w", false, "write to source file instead of stdout")
 
 	flag.Parse()
@@ -61,7 +57,7 @@ func newrelic(conf config, dir string) *decorator.Package {
 		})
 	}
 
-	injectInit(pkg, conf.name, conf.key)
+	injectInit(pkg)
 
 	return pkg
 }

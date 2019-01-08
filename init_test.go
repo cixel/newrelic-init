@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -20,25 +21,29 @@ func TestInjectInit(t *testing.T) {
 			const appname = "test_app_name"
 			const license = "test_license"
 
-			injectInit(pkg, appname, license)
+			injectInit(pkg)
 			buf := fileToBuf(pkg.Syntax[0], "foo", ".")
 
 			str := buf.String()
 
-			if !expect == strings.Contains(str, "conf :=") {
+			if expect != strings.Contains(str, "conf :=") {
 				t.Fatalf("missing assignment to conf:\n%s", str)
 			}
 
-			if !expect == strings.Contains(str, appname) {
-				t.Fatalf("missing app name:\n%s", str)
-			}
-
-			if !expect == strings.Contains(str, appname) {
-				t.Fatalf("missing license:\n%s", str)
-			}
-
-			if expect == !strings.Contains(str, "github.com/newrelic/go-agent") {
+			if expect != strings.Contains(str, "github.com/newrelic/go-agent") {
 				t.Fatalf("missing newrelic import:\n%s", str)
+			}
+
+			if expect != strings.Contains(str, fmt.Sprintf(`Getenv("%s")`, nrLicenseEnv)) {
+				t.Fatalf("missing expected check for license key env:\n%s", str)
+			}
+
+			if expect != strings.Contains(str, fmt.Sprintf(`Getenv("%s")`, nrAppEnv)) {
+				t.Fatalf("missing expected check for app name env:\n%s", str)
+			}
+
+			if expect != strings.Contains(str, `"os"`) {
+				t.Fatalf("missing os import\n %s", str)
 			}
 
 			testutil.CompareGolden(t, buf.Bytes())
