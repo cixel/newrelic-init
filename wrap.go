@@ -29,6 +29,7 @@ func wrap(pkg *decorator.Package, c *dst.CallExpr, cursor *dstutil.Cursor) {
 					},
 					Args: []dst.Expr{
 						dst.NewIdent("newrelicApp"),
+						// FIXME: this won't handle http.HandleFunc(x())
 						c.Args[0],
 						c.Args[1],
 					},
@@ -85,7 +86,4 @@ func extractIdent(expr ast.Expr) *ast.Ident {
 	}
 
 	return nil
-}
-
-func wrapHandleFunc() {
 }

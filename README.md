@@ -26,3 +26,8 @@ Ensure the `NEW_RELIC_APP_NAME` and `NEW_RELIC_LICENSE_KEY` variables are set be
 ## TODO:
 
 * config for adding transactions to named package functions
+
+## FIXME: 
+* avoid adding init if it's already there
+* avoid re-wrapping previously wrapped `http.HandleFunc`
+* handle code like `http.HandleFunc(x())` where multi-returns need to be saved in order to be passed into `newrelic.WrapHandleFunc`
