@@ -23,6 +23,6 @@ Ensure the `NEW_RELIC_APP_NAME` and `NEW_RELIC_LICENSE_KEY` variables are set be
 
 `SOURCE` must be valid as a package path.
 
-## TODO:
+## TODO
 
 * config for adding transactions to named package functions
